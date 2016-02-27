@@ -46,7 +46,7 @@ tasks.withType(Test){
     classpath += configurations.testCompile
 }
 
-task firefox(type: Test) {
+task web(type: Test) {
     maxParallelForks = Integer.valueOf(maxThreads) //default is 1 if not specified
     testLogging.events "started"
     testLogging {
@@ -55,6 +55,29 @@ task firefox(type: Test) {
     }
     useTestNG() {
         includeGroups 'webFirst'
+        excludeGroups 'chrome', 'broken', 'smoke', 'hosted'
+        useDefaultListeners = false
+        listeners << 'org.uncommons.reportng.HTMLReporter'
+        //listeners << 'com.xmatters.testng.Listener'
+    }
+
+    reports.html.destination = file("${reporting.baseDir}/firefox")
+
+    systemProperties.BROWSER = System.getProperty('BROWSER', 'firefox')
+
+    exclude '*/WebTests/'
+    exclude '*/MobileTests/'
+}
+
+task mobileweb(type: Test, dependsOn: web) {
+    maxParallelForks = Integer.valueOf(maxThreads) //default is 1 if not specified
+    testLogging.events "started"
+    testLogging {
+        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat "full" // default is "short"
+    }
+    useTestNG() {
+        includeGroups 'mobSecond'
         excludeGroups 'chrome', 'broken', 'smoke', 'hosted'
         useDefaultListeners = false
         listeners << 'org.uncommons.reportng.HTMLReporter'
