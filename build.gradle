@@ -1,0 +1,70 @@
+// Apply the java plugin to add support for Java
+apply plugin: 'java'
+apply plugin: 'idea'
+
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+   mavenCentral()
+}
+
+configurations { driver }
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+    compile "io.appium:java-client:3.3.0"
+    //compile "org.seleniumhq.selenium:selenium-java:2.46.0"
+    compile "com.google.inject:guice:3.0"
+    compile "org.testng:testng:6.9.9"
+    compile "org.json:json:20090211"
+    testCompile('org.uncommons:reportng:1.1.2') {
+        exclude group: 'org.testng'
+    }
+    compile ('com.jayway.restassured:rest-assured:2.1.0') {
+        exclude module: 'groovy'
+    }
+    compile "org.codehaus.groovy:groovy-all:2.2.0"
+}
+
+def maxThreads = System.getProperty("MAXTHREADS","1")
+
+tasks.withType(Test){
+    maxParallelForks = 1
+    forkEvery = 1000
+    ignoreFailures = false
+
+    // Pass all System properties to the tests
+    //systemProperties = System.getProperties(); // Like this it will give unsatiesfied link error
+    // http://stackoverflow.com/questions/33812405/selenium-gradle-testng-unsatisfiedlinkerror-on-driver-quit
+    systemProperties = [
+            BROWSER: System.getProperty('BROWSER', 'firefox')
+    ]
+
+    // Make the standard streams (err and out) visible at the console when running tests
+    testLogging.showStandardStreams = true
+
+    classpath += configurations.testCompile
+}
+
+task firefox(type: Test) {
+    maxParallelForks = Integer.valueOf(maxThreads) //default is 1 if not specified
+    testLogging.events "started"
+    testLogging {
+        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat "full" // default is "short"
+    }
+    useTestNG() {
+        includeGroups 'webFirst'
+        excludeGroups 'chrome', 'broken', 'smoke', 'hosted'
+        useDefaultListeners = false
+        listeners << 'org.uncommons.reportng.HTMLReporter'
+        //listeners << 'com.xmatters.testng.Listener'
+    }
+
+    reports.html.destination = file("${reporting.baseDir}/firefox")
+
+    systemProperties.BROWSER = System.getProperty('BROWSER', 'firefox')
+
+    exclude '*/WebTests/'
+    exclude '*/MobileTests/'
+}
